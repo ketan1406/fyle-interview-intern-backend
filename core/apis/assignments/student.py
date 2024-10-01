@@ -29,6 +29,7 @@ def upsert_assignment(p, incoming_payload):
     if not assignment.content or assignment.content.strip() == "":
         return APIResponse.respond({'error': 'Content cannot be null, empty, or contain only whitespace.'}, 400)
     
+    # Proceed with updation
     upserted_assignment = Assignment.upsert(assignment)
     db.session.commit()
     upserted_assignment_dump = AssignmentSchema().dump(upserted_assignment)
@@ -44,7 +45,8 @@ def submit_assignment(p, incoming_payload):
 
     # Fetch the assignment by ID
     assignment = Assignment.get_by_id(submit_assignment_payload.id)
-    
+
+    # Checks if the assignment to be submitted is in draft state or not
     if assignment.state != AssignmentStateEnum.DRAFT:
         return APIResponse.respond_error('FyleError', 'only a draft assignment can be submitted', 400)
 
