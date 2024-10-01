@@ -3,6 +3,7 @@ from core import db
 from core.apis import decorators
 from core.apis.responses import APIResponse
 from core.models.assignments import Assignment, AssignmentStateEnum
+from core.libs.exceptions import FyleError
 
 from .schema import AssignmentSchema, AssignmentGradeSchema
 teacher_assignments_resources = Blueprint('teacher_assignments_resources', __name__)
@@ -28,15 +29,15 @@ def grade_assignment(p, incoming_payload):
 
     # Check if the assignment exists
     if assignment is None:
-        return APIResponse.respond_error('FyleError', 'Assignment not found', 404)
+        raise FyleError(status_code=404, message='Assignment not found')
 
     # Check if the teacher is the correct one for this assignment
     if assignment.teacher_id != p.teacher_id:
-        return APIResponse.respond_error('FyleError', 'You are not authorized to grade this assignment.', 400)
+        raise FyleError(status_code=400, message='You are not authorized to grade this assignment.')
     
     # Ensure the assignment is in a valid state to be graded
     if assignment.state == AssignmentStateEnum.DRAFT:
-        return APIResponse.respond_error('FyleError', 'Only submitted assignments can be graded.', 400)
+        raise FyleError(status_code=400, message='Only submitted assignments can be graded.')
 
     graded_assignment = Assignment.mark_grade(
         _id=grade_assignment_payload.id,

@@ -3,6 +3,7 @@ from core import db
 from core.apis import decorators
 from core.apis.responses import APIResponse
 from core.models.assignments import Assignment, AssignmentStateEnum
+from core.libs.exceptions import FyleError
 
 from .schema import AssignmentSchema, AssignmentSubmitSchema
 student_assignments_resources = Blueprint('student_assignments_resources', __name__)
@@ -27,7 +28,7 @@ def upsert_assignment(p, incoming_payload):
 
     # Validate that content is not null or empty
     if not assignment.content or assignment.content.strip() == "":
-        return APIResponse.respond({'error': 'Content cannot be null, empty, or contain only whitespace.'}, 400)
+        raise FyleError(status_code=400, message='Content cannot be null, empty, or contain only whitespace.')
     
     # Proceed with updation
     upserted_assignment = Assignment.upsert(assignment)
@@ -48,7 +49,7 @@ def submit_assignment(p, incoming_payload):
 
     # Checks if the assignment to be submitted is in draft state or not
     if assignment.state != AssignmentStateEnum.DRAFT:
-        return APIResponse.respond_error('FyleError', 'only a draft assignment can be submitted', 400)
+        raise FyleError(status_code=400, message='only a draft assignment can be submitted')
 
 
     # Proceed with submission
