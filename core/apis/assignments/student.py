@@ -2,7 +2,7 @@ from flask import Blueprint
 from core import db
 from core.apis import decorators
 from core.apis.responses import APIResponse
-from core.models.assignments import Assignment
+from core.models.assignments import Assignment, AssignmentStateEnum
 
 from .schema import AssignmentSchema, AssignmentSubmitSchema
 student_assignments_resources = Blueprint('student_assignments_resources', __name__)
@@ -25,6 +25,10 @@ def upsert_assignment(p, incoming_payload):
     assignment = AssignmentSchema().load(incoming_payload)
     assignment.student_id = p.student_id
 
+    # Validate that content is not null or empty
+    if not assignment.content or assignment.content.strip() == "":
+        return APIResponse.respond({'error': 'Content cannot be null, empty, or contain only whitespace.'}, 400)
+    
     upserted_assignment = Assignment.upsert(assignment)
     db.session.commit()
     upserted_assignment_dump = AssignmentSchema().dump(upserted_assignment)
@@ -38,6 +42,14 @@ def submit_assignment(p, incoming_payload):
     """Submit an assignment"""
     submit_assignment_payload = AssignmentSubmitSchema().load(incoming_payload)
 
+    # Fetch the assignment by ID
+    assignment = Assignment.get_by_id(submit_assignment_payload.id)
+    
+    if assignment.state != AssignmentStateEnum.DRAFT:
+        return APIResponse.respond_error('FyleError', 'only a draft assignment can be submitted', 400)
+
+
+    # Proceed with submission
     submitted_assignment = Assignment.submit(
         _id=submit_assignment_payload.id,
         teacher_id=submit_assignment_payload.teacher_id,
@@ -46,3 +58,4 @@ def submit_assignment(p, incoming_payload):
     db.session.commit()
     submitted_assignment_dump = AssignmentSchema().dump(submitted_assignment)
     return APIResponse.respond(data=submitted_assignment_dump)
+
